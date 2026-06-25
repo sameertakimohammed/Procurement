@@ -1,22 +1,35 @@
 """Kiwiplan adapter — read stock + resolved material requirements via KDW/SQL;
 inject production orders via KMC / Transmission Links. Read-only for procurement.
-NOTE: confirm with Advantive which inbound channel + which requirement views your
-licence actually exposes before relying on inject/requirements."""
+
+OPEN QUESTION (CLAUDE.md §7): confirm with Advantive which inbound channel (KMC /
+Transmission Links) and which requirement/stock views your licence exposes via
+KDW/SQL before relying on inject/requirements. Until then get_stock serves demo
+data when KIWIPLAN_DSN is unset.
+"""
+from typing import Optional
+
 from ..config import settings
+from . import fakes
 
 
 class KiwiplanAdapter:
     def __init__(self, dsn=None):
-        self.dsn = dsn or settings.kiwiplan_dsn
+        self.dsn = dsn if dsn is not None else settings.kiwiplan_dsn
 
-    def get_stock(self, item_ref: str) -> dict | None:
-        """on_hand / allocated / on_order for a roll-stock material. TODO (KDW/SQL)."""
-        raise NotImplementedError
+    @property
+    def use_fakes(self) -> bool:
+        return settings.fakes_for(settings.kiwiplan_enabled)
+
+    def get_stock(self, item_ref: Optional[str]) -> list[dict]:
+        """Stock rows for a roll-stock/plant material, one per location:
+        [{location, on_hand, allocated, on_order}]. Empty list => unknown/none."""
+        if self.use_fakes:
+            return fakes.kiwiplan_stock(item_ref)
+        # TODO: SELECT against the KDW stock view for item_ref -> rows by location.
+        raise NotImplementedError("Kiwiplan live stock read not implemented (CLAUDE.md §7).")
 
     def get_requirements(self, production_order: str) -> list[dict]:
-        """Resolved material requirements for a production order. TODO."""
-        raise NotImplementedError
+        raise NotImplementedError  # Phase 4
 
     def inject_production_order(self, order: dict) -> str:
-        """Create a production order via KMC; return Kiwiplan ref. TODO."""
-        raise NotImplementedError
+        raise NotImplementedError  # Phase 4
