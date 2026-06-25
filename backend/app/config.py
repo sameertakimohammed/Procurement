@@ -36,10 +36,17 @@ class Settings(BaseSettings):
     bc_company: str = ""
     bc_username: str = ""
     bc_password: str = ""
+    bc_auth: str = "ntlm"              # "ntlm" | "basic"
+    bc_verify_tls: bool = True         # set false only for a self-signed on-prem cert
+    bc_items_entity: str = "Items"     # OData entity set for the item master (confirm name)
 
-    # Kiwiplan (KDW/SQL read, KMC inject) / Accura (ODBC read)
+    # Kiwiplan (KDW/SQL read, KMC inject) / Accura (ODBC read).
+    # *_stock_sql is a parameterized query you supply (see INTEGRATIONS.md) returning
+    # columns: location, on_hand, allocated, on_order — with one :item_ref placeholder.
     kiwiplan_dsn: str = ""
+    kiwiplan_stock_sql: str = ""
     accura_dsn: str = ""
+    accura_stock_sql: str = ""
 
     # M365 Graph mailer
     graph_tenant_id: str = ""
@@ -78,11 +85,12 @@ class Settings(BaseSettings):
 
     @property
     def kiwiplan_enabled(self) -> bool:
-        return bool(self.kiwiplan_dsn)
+        # Needs both the connection and the query before it can read live.
+        return bool(self.kiwiplan_dsn and self.kiwiplan_stock_sql)
 
     @property
     def accura_enabled(self) -> bool:
-        return bool(self.accura_dsn)
+        return bool(self.accura_dsn and self.accura_stock_sql)
 
     def fakes_for(self, system_enabled: bool) -> bool:
         """Use demo data for a given system when forced, or when it is unconfigured."""

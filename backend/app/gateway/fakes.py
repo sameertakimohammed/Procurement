@@ -133,6 +133,7 @@ def list_items() -> list[dict]:
             # In a real master these are distinct system ids; demo uses the SKU.
             "kiwiplan_ref": row["sku"] if "KIWIPLAN" in systems else None,
             "accura_ref": row["sku"] if "ACCURA" in systems else None,
+            "sales_price": row["sales_price"],
         })
     return out
 

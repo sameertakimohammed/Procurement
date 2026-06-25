@@ -22,11 +22,14 @@ class AccuraAdapter:
 
     def get_stock(self, item_ref: Optional[str]) -> list[dict]:
         """Label-stock rows for a material, one per location:
-        [{location, on_hand, allocated, on_order}]. Empty list => unknown/none."""
+        [{location, on_hand, allocated, on_order}]. Empty list => unknown/none.
+
+        Live mode runs settings.accura_stock_sql against ACCURA_DSN. Confirm the
+        exact ODBC table/columns with Data Design Services (CLAUDE.md §7)."""
         if self.use_fakes:
             return fakes.accura_stock(item_ref)
-        # TODO: ODBC read against the Accura stock table for item_ref -> rows by location.
-        raise NotImplementedError("Accura live stock read not implemented (CLAUDE.md §7).")
+        from ._odbc import read_stock
+        return read_stock(self.dsn, settings.accura_stock_sql, item_ref)
 
     def get_requirements(self, job: str) -> list[dict]:
         raise NotImplementedError  # Phase 4

@@ -22,11 +22,14 @@ class KiwiplanAdapter:
 
     def get_stock(self, item_ref: Optional[str]) -> list[dict]:
         """Stock rows for a roll-stock/plant material, one per location:
-        [{location, on_hand, allocated, on_order}]. Empty list => unknown/none."""
+        [{location, on_hand, allocated, on_order}]. Empty list => unknown/none.
+
+        Live mode runs settings.kiwiplan_stock_sql against KIWIPLAN_DSN. Confirm
+        the exact KDW view/columns with Advantive (CLAUDE.md §7) and set that SQL."""
         if self.use_fakes:
             return fakes.kiwiplan_stock(item_ref)
-        # TODO: SELECT against the KDW stock view for item_ref -> rows by location.
-        raise NotImplementedError("Kiwiplan live stock read not implemented (CLAUDE.md §7).")
+        from ._odbc import read_stock
+        return read_stock(self.dsn, settings.kiwiplan_stock_sql, item_ref)
 
     def get_requirements(self, production_order: str) -> list[dict]:
         raise NotImplementedError  # Phase 4

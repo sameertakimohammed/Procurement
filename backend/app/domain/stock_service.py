@@ -51,10 +51,14 @@ def sync_items(session: Session) -> int:
         item.is_made = r.get("is_made", False)
         item.reorder_point = r.get("reorder_point")
         item.lead_time_days = r.get("lead_time_days")
-        try:
-            price = bc.get_item_price(r["sku"])
-        except NotImplementedError:
-            price = None
+        # Price comes with the master row when available; fall back to a per-item
+        # lookup only if it doesn't.
+        price = r.get("sales_price")
+        if price is None:
+            try:
+                price = bc.get_item_price(r["sku"])
+            except Exception:
+                price = None
         if price is not None:
             item.sales_price = price
             item.price_synced_at = now
