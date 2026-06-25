@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { api } from '../api.js'
 import { useAuth } from '../auth.jsx'
 import { money, num, relativeTime } from '../format.js'
+import { BomTree } from './Planning.jsx'
 
 export default function StockDetail() {
   const { sku } = useParams()
@@ -91,6 +92,11 @@ export default function StockDetail() {
           </table>
         </section>
       ))}
+
+      <section className="card">
+        <h2>Bill of materials</h2>
+        <BomTree sku={v.sku} />
+      </section>
     </div>
   )
 }

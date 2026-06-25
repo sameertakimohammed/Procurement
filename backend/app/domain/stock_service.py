@@ -15,7 +15,16 @@ from ..gateway import fakes
 from ..gateway.accura import AccuraAdapter
 from ..gateway.bc import BCAdapter
 from ..gateway.kiwiplan import KiwiplanAdapter
-from ..gateway.models import Item, ItemType, StockSnapshot, Vendor, VendorPrice
+from ..gateway.models import (
+    BomHeader,
+    BomLine,
+    BomOwner,
+    Item,
+    ItemType,
+    StockSnapshot,
+    Vendor,
+    VendorPrice,
+)
 
 bc = BCAdapter()
 kiwiplan = KiwiplanAdapter()
@@ -109,6 +118,56 @@ def seed_vendors(session: Session) -> int:
     return count
 
 
+def seed_boms(session: Session) -> int:
+    """Seed demo BOM headers + lines when no BOM exists yet.
+
+    The app owns the top kit level; the material bills are MIRRORED read-only from
+    Kiwiplan/Accura (CLAUDE.md §2), so each header carries its owner. Idempotent:
+    a no-op once any BomHeader exists, or when BC is live (the real masters/mirrors
+    will supply BOMs then). Runs in the same demo-seed path vendors use so the test
+    fixture and first boot both get BOMs. Returns the BomLine count after seeding.
+
+    SKUs from fakes are resolved to seeded item_ids here; an unknown SKU (parent or
+    component) skips that line so a partial catalog can't break seeding.
+    """
+    if not bc.use_fakes:
+        return len(session.exec(select(BomLine)).all())
+    if session.exec(select(BomHeader)).first() is not None:
+        return len(session.exec(select(BomLine)).all())
+
+    items_by_sku = {it.sku: it for it in session.exec(select(Item)).all()}
+    count = 0
+    for bom in fakes.boms():
+        parent = items_by_sku.get(bom["sku"])
+        if parent is None:
+            continue
+        header = BomHeader(
+            parent_item_id=parent.id,
+            version=1,
+            status="ACTIVE",
+            owner=BomOwner(bom["owner"]),
+            yield_qty=bom.get("yield_qty", 1.0),
+            synced_at=datetime.utcnow(),
+        )
+        session.add(header)
+        session.flush()  # need header.id for its lines
+        for i, ln in enumerate(bom["lines"], start=1):
+            component = items_by_sku.get(ln["component"])
+            if component is None:
+                continue
+            session.add(BomLine(
+                bom_header_id=header.id,
+                line_no=i,
+                component_id=component.id,
+                qty_per=ln["qty_per"],
+                uom=component.uom,
+                scrap_pct=ln.get("scrap_pct", 0.0),
+            ))
+            count += 1
+    session.commit()
+    return count
+
+
 def _rows_for(item: Item) -> list[tuple[str, list[dict]]]:
     """(system, rows) for each operational source that holds this item, skipping
     a source if its live read fails so one outage can't blank the whole view."""
@@ -150,6 +209,9 @@ def refresh_all(session: Session) -> int:
     # vendor already exists, or when BC is live). Keeps PO vendor-selection usable
     # out of the box and makes vendors available to the test fixture.
     seed_vendors(session)
+    # Seed demo BOMs the same way (no-op once any BOM exists / when BC is live) so
+    # the explosion service + suggested requisitions work out of the box.
+    seed_boms(session)
     items = session.exec(select(Item)).all()
     for item in items:
         refresh_item(session, item)
