@@ -166,6 +166,51 @@ VENDOR_PRICES = {
 }
 
 
+# --------------------------------------------------------------------------- #
+# BOMs (Phase 4). Per CLAUDE.md §2 the app OWNS the top "kit" level of
+# cross-system BOMs; only the material BOMs are MIRRORED read-only from
+# production. BOX-RSC-A and LABEL-1L-RANGE are both top-level FINISHED kits, so
+# their kit headers are owner=APP. (A mirrored material sub-bill would be modelled
+# as its own nested BomHeader owned by KIWIPLAN/ACCURA under the APP kit; the demo
+# has no such intermediate level yet — these kits explode straight to purchased
+# material leaves.)
+# Materials are purchased leaves (no BOM of their own). qty_per is per 1 unit of
+# the parent (yield_qty 1.0); scrap_pct is a fraction (0.05 == 5%). These are the
+# same SKUs the CATALOG/vendor_prices use so they resolve to seeded item_ids.
+#
+# Each entry: {sku: {owner, yield_qty, lines: [{component, qty_per, scrap_pct}]}}.
+# --------------------------------------------------------------------------- #
+BOMS = {
+    "BOX-RSC-A": {
+        "owner": "APP",
+        "yield_qty": 1.0,
+        "lines": [
+            {"component": "BOARD-200K", "qty_per": 0.62, "scrap_pct": 0.05},
+            {"component": "GLUE-STARCH", "qty_per": 0.02, "scrap_pct": 0.0},
+            {"component": "WIRE-STITCH", "qty_per": 0.005, "scrap_pct": 0.0},
+            {"component": "STRAP-PET-16", "qty_per": 0.5, "scrap_pct": 0.0},
+        ],
+    },
+    "LABEL-1L-RANGE": {
+        "owner": "APP",
+        "yield_qty": 1.0,
+        "lines": [
+            {"component": "LBL-SUB-PP", "qty_per": 0.02, "scrap_pct": 0.0},
+            {"component": "LBL-RIBBON-TT", "qty_per": 0.001, "scrap_pct": 0.0},
+        ],
+    },
+}
+
+
+def boms() -> list[dict]:
+    """BOM definitions: one row per parent with its owner + component lines."""
+    return [
+        {"sku": sku, "owner": b["owner"], "yield_qty": b["yield_qty"],
+         "lines": [dict(ln) for ln in b["lines"]]}
+        for sku, b in BOMS.items()
+    ]
+
+
 def vendors() -> list[dict]:
     """Vendor master as BC would expose it (one row per vendor)."""
     return [dict(v) for v in VENDORS]
