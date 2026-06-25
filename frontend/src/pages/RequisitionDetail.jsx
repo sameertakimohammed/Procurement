@@ -5,6 +5,7 @@ import { useAuth } from '../auth.jsx'
 import { money, num, relativeTime } from '../format.js'
 import { availableActions, statusBadge } from '../requisitions.js'
 import { canIssuePO } from '../purchaseOrders.js'
+import { renderDetail } from '../events.js'
 
 export default function RequisitionDetail() {
   const { id } = useParams()
@@ -212,16 +213,6 @@ export default function RequisitionDetail() {
       </section>
     </div>
   )
-}
-
-function renderDetail(detail) {
-  if (detail == null) return null
-  if (typeof detail === 'string') return detail
-  if (typeof detail === 'object') {
-    if (detail.reason) return `Reason: ${detail.reason}`
-    return Object.entries(detail).map(([k, v]) => `${k}: ${v}`).join(' · ')
-  }
-  return String(detail)
 }
 
 function Meta({ label, value }) {

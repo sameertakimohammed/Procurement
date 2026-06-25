@@ -8,6 +8,7 @@ import {
   buildReceivePayload, canShowReceiveForm, hasReceiptLines, lineReceiptRows,
   matchBadge, validateReceipt,
 } from '../receiving.js'
+import { renderDetail } from '../events.js'
 
 // How a PO's email-notify status (returned by the backend) reads in the UI.
 function emailLabel(status) {
@@ -329,16 +330,6 @@ function ReceivingSection({ po, rows, id, user, setUser, reload }) {
       </p>
     </section>
   )
-}
-
-function renderDetail(detail) {
-  if (detail == null) return null
-  if (typeof detail === 'string') return detail
-  if (typeof detail === 'object') {
-    if (detail.reason) return `Reason: ${detail.reason}`
-    return Object.entries(detail).map(([k, v]) => `${k}: ${v}`).join(' · ')
-  }
-  return String(detail)
 }
 
 function Meta({ label, value }) {
